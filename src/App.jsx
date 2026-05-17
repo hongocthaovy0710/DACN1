@@ -1,15 +1,17 @@
 import { Route, Routes } from "react-router-dom";
 import Header from "./components/shared/Header";
 import Home from "./page/Home";
+import CreateTrip from "./page/CreateTrip";
 
 const App = () => {
   return (
-    <div>
+    <>
       <Header />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/create-trip" element={<CreateTrip />} />
       </Routes>
-    </div>
+    </>
   );
 };
 export default App;

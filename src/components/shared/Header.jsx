@@ -16,9 +16,11 @@ const Header = () => {
       </Link>
       {/* Buttons & Profile */}
       <div className="flex gap-x-4 sm:gap-x-8">
-        <Button variant="outline" className="mt-1 bg-transparent">
-          <Plus />
-          Create Trip
+        <Button asChild variant="outline" className="mt-1 bg-transparent">
+          <Link to="/create-trip">
+            <Plus />
+            Create Trip
+          </Link>
         </Button>
         <div className="flex mt-1">
           <Button variant="destructive" className="px-5!">
