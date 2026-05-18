@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import debounce from "lodash.debounce";
-import { Calendar } from "lucide-react";
+import { ArrowRight, Calendar, CheckCircle } from "lucide-react";
+import { BUDGET_OPTIONS, TRAVELER_OPTIONS } from "../assets/data";
+import { Arrow } from "radix-ui/internal";
 
 const CreateTrip = () => {
   const GEOAPIFY_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY;
@@ -21,6 +23,10 @@ const CreateTrip = () => {
       [name]: value,
     });
   };
+
+  const handleBack = () => {};
+
+  const handleNext = () => {};
 
   useEffect(() => {
     console.log(formData);
@@ -145,9 +151,92 @@ const CreateTrip = () => {
                   <p>We'll find spots that match your wallet.</p>
                 </div>
 
-                <div></div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2">
+                  {BUDGET_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      onClick={() => handleInputChange("budget", opt.id)}
+                      className={`p-4 rounded-xl border-2 transition-all flexCenter flex-col gap-3 ${
+                        formData.budget === opt.id
+                          ? "border-indigo-600 bg-indigo-50 shadow-md scale-105"
+                          : "border-gray-100 hover:border-indigo-200"
+                      }`}
+                    >
+                      <div
+                        className={`p-3 rounded-full ${
+                          formData.budget === opt.id
+                            ? "bg-indigo-100"
+                            : "bg-gray-100"
+                        }`}
+                      >
+                        {opt.icon}
+                      </div>
+                      <h5 className="font-bold">{opt.label}</h5>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
+
+            {/* Step 3: Traveler Type */}
+            {step === 3 && (
+              <div>
+                <div className="space-y-8">
+                  <div className="text-center">
+                    <h3 className="mb-2">Who are you traveling with?</h3>
+                    <p>Customize your experience based on your group.</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pt-2">
+                    {TRAVELER_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => handleInputChange("traveler", opt.id)}
+                        className={`p-4 rounded-xl border-2 transition-all flexCenter flex-col gap-3 ${
+                          formData.traveler === opt.id
+                            ? "border-indigo-600 bg-indigo-50 shadow-md scale-105"
+                            : "border-gray-100 hover:border-indigo-200"
+                        }`}
+                      >
+                        <span className="text-3xl">{opt.icon}</span>
+                        <div>
+                          <h5 className="font-bold">{opt.title}</h5>
+                          <p className="opacity-70">{opt.desc}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* NAVIGATION */}
+          <div className="flexBetween pt-6 border-t border-gray-100">
+            <button
+              onClick={handleBack}
+              className={`text-gray-500 hover:text-gray-900 font-medium px-4 py-2 ${
+                step === 1 && "invisible"
+              }`}
+            >
+              Back
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={
+                (step === 1 && !formData.destination) ||
+                (step === 1 && !formData.noOfDays) ||
+                (step === 2 && !formData.budget) ||
+                (step === 3 && !formData.traveler)
+              }
+            >
+              {step === 3 ? "Generate Trip" : "Continue"}
+              {step === 3 ? (
+                <CheckCircle className="ml-2 w-5 h-5" />
+              ) : (
+                <ArrowRight className="ml-2 w-5 h-5" />
+              )}
+            </button>
           </div>
         </div>
       </div>
