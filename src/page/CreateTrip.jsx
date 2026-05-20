@@ -1,11 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import debounce from "lodash.debounce";
-import { ArrowRight, Calendar, CheckCircle } from "lucide-react";
+import { ArrowRight, Calendar, CheckCircle, Loader2 } from "lucide-react";
 import { BUDGET_OPTIONS, TRAVELER_OPTIONS } from "../assets/data";
-import { Arrow } from "radix-ui/internal";
+//import { Arrow } from "radix-ui/internal";
+import { toast } from "sonner";
+import { generateTripWithAI } from "@/services/aiModel";
+import LoginDialog from "@/components/shared/LoginDialog";
 
 const CreateTrip = () => {
   const GEOAPIFY_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY;
+  const [openDialog, setOpenDialog] = useState(false);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -24,13 +28,73 @@ const CreateTrip = () => {
     });
   };
 
-  const handleBack = () => {};
+  const handleBack = () => {
+    if (step > 1) setStep(step - 1);
+  };
 
-  const handleNext = () => {};
+  const handleNext = () => {
+    if (step < 3) {
+      setStep(step + 1);
+    } else {
+      generateTrip();
+    }
+  };
 
-  useEffect(() => {
-    console.log(formData);
-  }, [formData]);
+  const generateTrip = async () => {
+    const user = localStorage.getItem("user");
+    if (!user) {
+      return setOpenDialog(true);
+    }
+    if (
+      !formData.destination ||
+      !formData.noOfDays ||
+      !formData.traveler ||
+      !formData.budget
+    ) {
+      return toast.error("Please fill all details.");
+    }
+    if (formData.noOfDays > 5) {
+      return toast.error("AI can currently generate up to 5 days only.");
+    }
+    setLoading(true);
+    //console.log(formData);
+
+    const DYNAMIC_PROMPT = `Generate a travel plan for Location: ${formData?.destination} for ${formData?.noOfDays} days for a ${formData?.traveler} traveler on ${formData?.budget} budget. Return the result strictly as a single JSON object using camelCase keys, the travel plan with trip note and must feature hotelsOptions array, each hotel with hotelName, hotelAddress, priceRange, imageUrl, rating, description, and a coordinates, alongside an itinerary array of daily plans. Each day must include a dayNumber, theme, and an activities array, where each activity contains activityName, description, imageUrl, ticketPrice, timeRange, timeToTravel and coordinates`;
+
+    try {
+      const tripData = await generateTripWithAI(DYNAMIC_PROMPT);
+      console.log("tripData:", tripData);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      toast.error(
+        error.message?.includes("429")
+          ? "Rate limit hit! Wait 60s."
+          : "Generation failed. ",
+      );
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flexCenter flex-col p-4">
+        <div className="relative">
+          <div className="absolute inset-0 bg-indigo-200 rounded-full animate-ping opacity-25" />
+          <div className="relative bg-white p-4 rounded-full shadow-xl">
+            <Loader2 className="w-12 h-12 text-indigo-600 animate-spin" />
+          </div>
+        </div>
+
+        <h3 className="mt-8 text-gray-900">
+          Curating your trip to {formData.destination?.split(",")[0]}...
+        </h3>
+
+        <p className="mt-2 text-gray-500 animate-pulse">
+          Our AI is finding the best hotels and hidden gems...
+        </p>
+      </div>
+    );
+  }
 
   const searchPlace = debounce(async (text) => {
     if (!text) {
@@ -229,8 +293,16 @@ const CreateTrip = () => {
                 (step === 2 && !formData.budget) ||
                 (step === 3 && !formData.traveler)
               }
+              className={`flex items-center px-8 py-3 rounded-xl font-bold text-white transition-all shadow-lg ${
+                (step === 1 && !formData.destination) ||
+                (step === 1 && !formData.noOfDays) ||
+                (step === 2 && !formData.budget) ||
+                (step === 3 && !formData.traveler)
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-700 active:scale-95"
+              }`}
             >
-              {step === 3 ? "Generate Trip" : "Continue"}
+              {step === 3 ? "Generate Plan" : "Continue"}
               {step === 3 ? (
                 <CheckCircle className="ml-2 w-5 h-5" />
               ) : (
@@ -240,6 +312,11 @@ const CreateTrip = () => {
           </div>
         </div>
       </div>
+      <LoginDialog
+        open={openDialog}
+        onclose={() => setOpenDialog(false)}
+        onLoginSuccess={generateTrip}
+      />
     </div>
   );
 };
