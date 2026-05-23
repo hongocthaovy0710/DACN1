@@ -10,26 +10,56 @@ import { useGoogleAuth } from "@/services/authApi";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
 import { FaGoogle } from "react-icons/fa6";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
-const LoginDialog = ({ open, onclose, onLoginSuccess }) => {
+const LoginDialog = ({ open, onClose, onLoginSuccess }) => {
   const handleLogin = useGoogleAuth({
     onSuccess: () => {
-      onclose();
+      onClose();
       onLoginSuccess?.();
       toast.success("Login successful");
     },
   });
   return (
-    <Dialog open={open} onOpenChange={onclose}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-94">
         <DialogHeader>
-          <DialogTitle>Are you absolutely sure?</DialogTitle>
+          <DialogTitle>Login to your account</DialogTitle>
           <DialogDescription>
-            This action cannot be undone. This will permanently delete your
-            account and remove your data from our servers.
+            Log in to unlock AI itineraries and save your plans. Sync your
+            travel schedules across all your devices.
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter>
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="m@example.com"
+              required
+            />
+          </div>
+          <div className="grid gap-2">
+            <div className="flex items-center">
+              <label htmlFor="password">Password</label>
+
+              <a
+                href="#"
+                className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+              >
+                Forgot your password?
+              </a>
+            </div>
+
+            <Input id="password" type="password" required />
+          </div>
+        </div>
+        <DialogFooter className="grid grid-cols-1 gap-3 mt-3">
+          <Button type="submit" className="w-full rounded-md" disabled={true}>
+            Login
+          </Button>
           <Button
             onClick={handleLogin}
             type="submit"

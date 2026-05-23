@@ -6,12 +6,16 @@ import { BUDGET_OPTIONS, TRAVELER_OPTIONS } from "../assets/data";
 import { toast } from "sonner";
 import { generateTripWithAI } from "@/services/aiModel";
 import LoginDialog from "@/components/shared/LoginDialog";
+import { doc, setDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+import { db } from "@/services/firebaseConfig";
 
 const CreateTrip = () => {
   const GEOAPIFY_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY;
   const [openDialog, setOpenDialog] = useState(false);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
   const [suggestions, setSuggestions] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -41,40 +45,101 @@ const CreateTrip = () => {
   };
 
   const generateTrip = async () => {
+    console.log("Generate clicked");
+    console.log("formData:", formData);
+
     const user = localStorage.getItem("user");
+
     if (!user) {
+      console.log("No user found, opening login dialog");
       return setOpenDialog(true);
     }
+
     if (
       !formData.destination ||
       !formData.noOfDays ||
       !formData.traveler ||
       !formData.budget
     ) {
+      console.log("Missing form data");
       return toast.error("Please fill all details.");
     }
+
     if (formData.noOfDays > 5) {
+      console.log("No of days greater than 5");
       return toast.error("AI can currently generate up to 5 days only.");
     }
+
     setLoading(true);
-    //console.log(formData);
 
     const DYNAMIC_PROMPT = `Generate a travel plan for Location: ${formData?.destination} for ${formData?.noOfDays} days for a ${formData?.traveler} traveler on ${formData?.budget} budget. Return the result strictly as a single JSON object using camelCase keys, the travel plan with trip note and must feature hotelsOptions array, each hotel with hotelName, hotelAddress, priceRange, imageUrl, rating, description, and a coordinates, alongside an itinerary array of daily plans. Each day must include a dayNumber, theme, and an activities array, where each activity contains activityName, description, imageUrl, ticketPrice, timeRange, timeToTravel and coordinates`;
 
     try {
+      console.log("Calling Gemini...");
+
       const tripData = await generateTripWithAI(DYNAMIC_PROMPT);
-      console.log("tripData:", tripData);
-      setLoading(false);
+
+      console.log("Gemini response:", tripData);
+      console.log("Saving trip to Firestore...");
+
+      await saveToDB(tripData);
+
+      console.log("Trip saved successfully");
     } catch (error) {
       setLoading(false);
-      toast.error(
-        error.message?.includes("429")
-          ? "Rate limit hit! Wait 60s."
-          : "Generation failed. ",
-      );
+      console.log("AI Error full:", error);
+      console.log("AI Error message:", error?.message);
+
+      const errorMessage = error?.message || "";
+
+      if (
+        errorMessage.includes("429") ||
+        errorMessage.includes("Quota exceeded")
+      ) {
+        toast.error("Rate limit hit! Wait 60s.");
+      } else if (
+        errorMessage.includes("503") ||
+        errorMessage.includes("high demand") ||
+        errorMessage.includes("UNAVAILABLE")
+      ) {
+        toast.error("Gemini đang quá tải, đợi 1-3 phút rồi thử lại nha.");
+      } else {
+        toast.error("Generation failed.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
+  const saveToDB = async (tripData) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
+      const docId = Date.now().toString();
+
+      console.log("saveToDB started");
+      console.log("docId:", docId);
+      console.log("user:", user);
+      console.log("tripData before save:", tripData);
+
+      await setDoc(doc(db, "trips-ai", docId), {
+        userSelection: formData,
+        tripData: tripData,
+        userEmail: user?.email || "",
+        id: docId,
+      });
+      setLoading(false);
+      console.log("Trip saved successfully");
+
+      toast.success("Trip generated!");
+
+      navigate(`/trips/${docId}`);
+    } catch (error) {
+      setLoading(false);
+      console.log("Firestore save error:", error);
+      toast.error("Failed to save to database.");
+      throw error;
+    }
+  };
   if (loading) {
     return (
       <div className="min-h-screen bg-white flexCenter flex-col p-4">
@@ -314,7 +379,7 @@ const CreateTrip = () => {
       </div>
       <LoginDialog
         open={openDialog}
-        onclose={() => setOpenDialog(false)}
+        onClose={() => setOpenDialog(false)}
         onLoginSuccess={generateTrip}
       />
     </div>

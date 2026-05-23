@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 const chat = ai.chats.create({
-  model: "gemini-2.0-flash",
+  model: "gemini-2.5-flash",
   history: [
     {
       role: "user",
@@ -211,10 +211,11 @@ export async function generateTripWithAI(DYNAMIC_PROMPT) {
 
     const textResponse = response.text;
 
-    // CLEANING THE STRING: Remove Markdown JSON formatting if the AI includes it
     const cleanJson = textResponse.replace(/```json|```/g, "").trim();
-    // console.log("clean json", cleanJson);
-    return cleanJson;
+
+    const parsedJson = JSON.parse(cleanJson);
+
+    return parsedJson;
   } catch (error) {
     console.error("Error generating trip.", error);
     throw error;
