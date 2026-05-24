@@ -1,4 +1,29 @@
+import React, { useEffect, useState } from "react";
+import { getPlacePhoto } from "@/services/placePhotoApi";
+
+const DEFAULT_ACTIVITY_IMAGE =
+  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80";
+
 const ActivityCard = ({ activity }) => {
+  const [placePhoto, setPlacePhoto] = useState(DEFAULT_ACTIVITY_IMAGE);
+
+  useEffect(() => {
+    if (!activity?.activityName) return;
+
+    const loadPhoto = async () => {
+      const searchText = `${activity?.activityName || ""} ${
+        activity?.description || ""
+      }`;
+
+      const photoUrl = await getPlacePhoto(searchText);
+      console.log("Activity photo URL:", photoUrl);
+
+      setPlacePhoto(photoUrl || activity?.imageUrl || DEFAULT_ACTIVITY_IMAGE);
+    };
+
+    loadPhoto();
+  }, [activity?.activityName, activity?.description, activity?.imageUrl]);
+
   return (
     <div className="group relative flex gap-x-5">
       {/* Icon */}
@@ -17,19 +42,21 @@ const ActivityCard = ({ activity }) => {
         </p>
 
         {/* Card */}
-        <div className="block border border-gray-200 rounded-lg hover:shadow-2xs focus:outline-hidden overflow-hidden">
-          <div className="relative flex flex-col sm:flex-row sm:items-center overflow-hidden">
+        <div className="block border border-gray-200 rounded-lg hover:shadow-2xs focus:outline-hidden overflow-hidden bg-white">
+          <div className="flex flex-col sm:flex-row overflow-hidden">
             <img
-              src={activity?.imageUrl || "/private.png"}
-              alt="actImg"
-              className="sm:w-48 h-32 sm:h-full sm:absolute inset-0 object-cover"
+              src={placePhoto || activity?.imageUrl || DEFAULT_ACTIVITY_IMAGE}
+              alt={activity?.activityName || "Activity image"}
+              className="w-full sm:w-56 h-40 sm:h-36 object-cover flex-shrink-0"
               onError={(e) => {
-                e.currentTarget.src = "/private.png";
+                e.currentTarget.onerror = null;
+                e.currentTarget.src =
+                  activity?.imageUrl || DEFAULT_ACTIVITY_IMAGE;
               }}
             />
 
-            <div className="grow p-4 sm:ms-48">
-              <div className="min-h-24 flex flex-col sm:justify-center">
+            <div className="grow p-4">
+              <div className="min-h-24 flex flex-col justify-center">
                 <h6 className="font-bold">
                   {activity?.activityName}{" "}
                   <span className="text-gray-500">
@@ -37,7 +64,7 @@ const ActivityCard = ({ activity }) => {
                   </span>
                 </h6>
 
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-sm text-gray-600 line-clamp-3">
                   {activity?.description}
                 </p>
               </div>

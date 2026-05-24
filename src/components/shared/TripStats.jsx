@@ -1,4 +1,4 @@
-import { Banknote, Clock, Info, Users } from "lucide-react";
+import { Banknote, Clock, Info, MapPin, Users } from "lucide-react";
 
 const TripStats = ({ trip }) => {
   return (
