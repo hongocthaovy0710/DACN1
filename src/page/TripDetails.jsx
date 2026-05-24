@@ -5,6 +5,14 @@ import { db } from "../services/firebaseConfig";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import { Calendar } from "lucide-react";
 import Itinerary from "@/components/shared/Itinerary";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
+import HotelCard from "@/components/shared/HotelCard";
+import Autoplay from "embla-carousel-autoplay";
+import TripStats from "@/components/shared/TripStats";
 
 const TripDetails = () => {
   const { tripId } = useParams();
@@ -81,6 +89,27 @@ const TripDetails = () => {
                   </h2>
                   <Itinerary trip={trip} />
                 </div>
+              </div>
+              {/* Right Column -> Hotels & Trip Summary */}
+              <div className="space-y-6">
+                <Carousel
+                  plugins={[
+                    Autoplay({
+                      delay: 3000,
+                    }),
+                  ]}
+                >
+                  <CarouselContent>
+                    {trip?.tripData?.travelPlan?.hotelsOptions?.map(
+                      (hotel, index) => (
+                        <CarouselItem key={index}>
+                          <HotelCard hotel={hotel} />
+                        </CarouselItem>
+                      ),
+                    )}
+                  </CarouselContent>
+                </Carousel>
+                <TripStats trip={trip} />
               </div>
             </div>
           </div>
