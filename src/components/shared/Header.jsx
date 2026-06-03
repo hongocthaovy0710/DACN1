@@ -70,6 +70,11 @@ const Header = () => {
                     <DropdownMenuItem onClick={() => navigate("/my-trips")}>
                       My Trips
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => navigate("/favorite-places")}
+                    >
+                      Favorite Places
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleLogout}>
                       Logout
                     </DropdownMenuItem>

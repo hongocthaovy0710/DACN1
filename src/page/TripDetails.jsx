@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../services/firebaseConfig";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import { Calendar } from "lucide-react";
@@ -14,6 +14,17 @@ import HotelCard from "@/components/shared/HotelCard";
 import Autoplay from "embla-carousel-autoplay";
 import TripStats from "@/components/shared/TripStats";
 import { getPlacePhoto } from "@/services/placePhotoApi";
+import BudgetPlanner from "@/components/shared/BudgetPlanner";
+import FoodSuggestions from "@/components/shared/FoodSuggestions";
+import TransportBooking from "@/components/shared/TransportBooking";
+import TripShareActions from "@/components/shared/TripShareActions";
+import TripCompletionPanel from "@/components/shared/TripCompletionPanel";
+import {
+  estimateHotelNightlyPrice,
+  getCoordinates,
+  getTripDestination,
+} from "@/utils/tripHelpers";
+import { toast } from "sonner";
 
 const TripDetails = () => {
   const { tripId } = useParams();
@@ -83,14 +94,7 @@ const TripDetails = () => {
       });
   }, [tripId, navigate]);
 
-  const destination =
-    trip?.userSelection?.destination?.label ||
-    trip?.userSelection?.destination?.value?.terms?.[0]?.value ||
-    trip?.userSelection?.destination?.formatted ||
-    trip?.userSelection?.destination?.properties?.formatted ||
-    trip?.userSelection?.destination ||
-    trip?.tripData?.travelPlan?.location ||
-    "";
+  const destination = getTripDestination(trip);
 
   useEffect(() => {
     if (!destination) return;
@@ -118,6 +122,96 @@ const TripDetails = () => {
   }
 
   const hotels = trip?.tripData?.travelPlan?.hotelsOptions || [];
+  const activities = (trip?.tripData?.travelPlan?.itinerary || []).flatMap(
+    (day) =>
+      (day.activities || []).map((activity) => ({
+        dayNumber: day.dayNumber,
+        theme: day.theme,
+        activity,
+      })),
+  );
+  const totalActivities = activities.length;
+  const visitedCount = Object.keys(trip?.visitedPlaces || {}).length;
+  const completionPercent = totalActivities
+    ? Math.round((visitedCount / totalActivities) * 100)
+    : 0;
+
+  const handleBookHotel = async (hotel, bookingDetails = {}) => {
+    const bookedHotel = {
+      ...hotel,
+      status: "confirmed",
+      bookedAt: new Date().toISOString(),
+      estimatedNightlyPrice: estimateHotelNightlyPrice(
+        hotel,
+        trip?.userSelection?.budget,
+      ),
+      ...bookingDetails,
+      coordinates: getCoordinates(hotel),
+    };
+
+    await updateDoc(doc(db, "trips-ai", tripId), {
+      bookedHotel,
+    });
+
+    setTrip({ ...trip, bookedHotel });
+    toast.success("Hotel selected for this trip!");
+  };
+
+  const buildFavoritePlace = (activityKey, activity, itinerary) => ({
+    key: activityKey,
+    activityName: activity?.activityName || "",
+    description: activity?.description || "",
+    imageUrl: activity?.imageUrl || "",
+    ticketPrice: activity?.ticketPrice || "",
+    timeRange: activity?.timeRange || "",
+    dayNumber: itinerary?.dayNumber || "",
+    theme: itinerary?.theme || "",
+    destination,
+    tripId,
+    tripName: destination || "Trip",
+    savedAt: new Date().toISOString(),
+  });
+
+  const handleToggleFavorite = async (activityKey, activity, itinerary) => {
+    const nextFavorites = { ...(trip?.favoritePlaces || {}) };
+
+    if (nextFavorites[activityKey]) {
+      delete nextFavorites[activityKey];
+    } else {
+      nextFavorites[activityKey] = buildFavoritePlace(
+        activityKey,
+        activity,
+        itinerary,
+      );
+    }
+
+    await updateDoc(doc(db, "trips-ai", tripId), {
+      favoritePlaces: nextFavorites,
+    });
+
+    setTrip({ ...trip, favoritePlaces: nextFavorites });
+  };
+
+  const handleToggleVisited = async (activityKey, activity, itinerary) => {
+    const nextVisited = { ...(trip?.visitedPlaces || {}) };
+
+    if (nextVisited[activityKey]) {
+      delete nextVisited[activityKey];
+    } else {
+      nextVisited[activityKey] = {
+        key: activityKey,
+        activityName: activity?.activityName || "",
+        dayNumber: itinerary?.dayNumber || "",
+        visitedAt: new Date().toISOString(),
+      };
+    }
+
+    await updateDoc(doc(db, "trips-ai", tripId), {
+      visitedPlaces: nextVisited,
+    });
+
+    setTrip({ ...trip, visitedPlaces: nextVisited });
+  };
 
   return (
     <div>
@@ -164,8 +258,18 @@ const TripDetails = () => {
                   Your Daily Plan
                 </h2>
 
-                <Itinerary trip={trip} />
+                <Itinerary
+                  trip={trip}
+                  onToggleFavorite={handleToggleFavorite}
+                  onToggleVisited={handleToggleVisited}
+                />
               </div>
+
+              <TransportBooking
+                trip={trip}
+                tripId={tripId}
+                onTripUpdate={setTrip}
+              />
             </div>
 
             {/* Right Column -> Hotels & Trip Summary */}
@@ -180,13 +284,47 @@ const TripDetails = () => {
                 <CarouselContent>
                   {hotels.map((hotel, index) => (
                     <CarouselItem key={index}>
-                      <HotelCard hotel={hotel} />
+                      <HotelCard
+                        hotel={hotel}
+                        trip={trip}
+                        isBooked={
+                          trip?.bookedHotel?.hotelName === hotel?.hotelName
+                        }
+                        onBookHotel={handleBookHotel}
+                      />
                     </CarouselItem>
                   ))}
                 </CarouselContent>
               </Carousel>
 
               <TripStats trip={trip} />
+
+              <TripCompletionPanel
+                trip={trip}
+                tripId={tripId}
+                onTripUpdate={setTrip}
+                totalActivities={totalActivities}
+                visitedCount={visitedCount}
+                completionPercent={completionPercent}
+              />
+
+              <BudgetPlanner
+                trip={trip}
+                tripId={tripId}
+                onTripUpdate={setTrip}
+              />
+
+              <FoodSuggestions
+                trip={trip}
+                tripId={tripId}
+                onTripUpdate={setTrip}
+              />
+
+              <TripShareActions
+                trip={trip}
+                tripId={tripId}
+                onTripUpdate={setTrip}
+              />
             </div>
           </div>
         </div>
