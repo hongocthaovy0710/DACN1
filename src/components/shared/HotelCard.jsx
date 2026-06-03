@@ -56,6 +56,28 @@ const HotelCard = ({
   const mapsUrl =
     "https://www.google.com/maps/search/?api=1&query=" +
     encodeURIComponent(`${hotel?.hotelName}, ${hotel?.hotelAddress}`);
+  const hotelStatus = trip?.bookedHotel?.status || "pending";
+  const hotelStatusMeta =
+    hotelStatus === "confirmed"
+      ? {
+          label: "Booked",
+          className: "bg-emerald-600 text-white",
+          panelClassName: "bg-emerald-50 text-emerald-800",
+          textClassName: "text-emerald-700",
+        }
+      : hotelStatus === "rejected"
+        ? {
+            label: "Rejected",
+            className: "bg-red-600 text-white",
+            panelClassName: "bg-red-50 text-red-800",
+            textClassName: "text-red-700",
+          }
+        : {
+            label: "Pending admin",
+            className: "bg-amber-500 text-white",
+            panelClassName: "bg-amber-50 text-amber-800",
+            textClassName: "text-amber-700",
+          };
 
   useEffect(() => {
     if (!hotel?.hotelName) return;
@@ -138,9 +160,11 @@ const HotelCard = ({
           </div>
 
           {isBooked && (
-            <span className="absolute top-3 left-3 inline-flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded-md shadow-sm text-xs font-bold">
+            <span
+              className={`absolute top-3 left-3 inline-flex items-center gap-1 px-2 py-1 rounded-md shadow-sm text-xs font-bold ${hotelStatusMeta.className}`}
+            >
               <CheckCircle2 className="h-3 w-3" />
-              Booked
+              {hotelStatusMeta.label}
             </span>
           )}
         </div>
@@ -196,16 +220,18 @@ const HotelCard = ({
           </div>
 
           {isBooked && trip?.bookedHotel && !showBookingForm && (
-            <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">
+            <div
+              className={`mt-4 rounded-xl p-3 text-sm ${hotelStatusMeta.panelClassName}`}
+            >
               <div className="flex items-center gap-2 font-bold">
                 <BedDouble className="h-4 w-4" />
                 {trip.bookedHotel.roomTypeLabel || "Standard Room"},{" "}
                 {trip.bookedHotel.guests} guest(s),{" "}
                 {trip.bookedHotel.nights} night(s)
               </div>
-              <p className="mt-1 text-emerald-700">
+              <p className={`mt-1 ${hotelStatusMeta.textClassName}`}>
                 {formatUsd(trip.bookedHotel.totalPrice)} -{" "}
-                {trip.bookedHotel.paymentLabel}
+                {trip.bookedHotel.paymentLabel} - {hotelStatusMeta.label}
               </p>
             </div>
           )}

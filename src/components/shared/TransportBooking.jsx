@@ -125,7 +125,7 @@ const TransportBooking = ({ trip, tripId, onTripUpdate, readOnly = false }) => {
       estimatedPrice,
       paymentStatus: form.paymentStatus,
       paymentLabel: form.paymentStatus === "paid" ? "Paid now" : "Pay later",
-      status: "confirmed",
+      status: "pending",
       createdAt: new Date().toISOString(),
     };
 
@@ -145,7 +145,28 @@ const TransportBooking = ({ trip, tripId, onTripUpdate, readOnly = false }) => {
       paymentStatus: "pay_later",
     });
     setPickupSuggestions([]);
-    toast.success("Ride confirmed!");
+    toast.success("Ride request sent. Waiting for admin confirmation!");
+  };
+
+  const getStatusMeta = (status) => {
+    if (status === "confirmed") {
+      return {
+        label: "confirmed",
+        className: "bg-emerald-50 text-emerald-700",
+      };
+    }
+
+    if (status === "rejected") {
+      return {
+        label: "rejected",
+        className: "bg-red-50 text-red-700",
+      };
+    }
+
+    return {
+      label: "pending admin",
+      className: "bg-amber-50 text-amber-700",
+    };
   };
 
   return (
@@ -331,32 +352,38 @@ const TransportBooking = ({ trip, tripId, onTripUpdate, readOnly = false }) => {
 
       <div className="mt-5 space-y-3">
         {bookings.length > 0 ? (
-          bookings.map((booking) => (
-            <div key={booking.id} className="rounded-xl border border-gray-100 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <h5>{booking.vehicleType}</h5>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {booking.status}
-                </span>
+          bookings.map((booking) => {
+            const statusMeta = getStatusMeta(booking.status);
+
+            return (
+              <div key={booking.id} className="rounded-xl border border-gray-100 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h5>{booking.vehicleType}</h5>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${statusMeta.className}`}
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    {statusMeta.label}
+                  </span>
+                </div>
+                <p className="mt-2 font-medium text-gray-700">
+                  {booking.providerName} - ETA {booking.providerEta}
+                </p>
+                <p className="mt-1 font-medium text-gray-700">
+                  Payment: {booking.paymentLabel || "Pay later"}
+                </p>
+                <p className="mt-2 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  {booking.pickup} to {booking.dropoff}
+                </p>
+                <p className="mt-1 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  {booking.pickupTime} - {booking.distanceKm} km -{" "}
+                  {formatUsd(booking.estimatedPrice)}
+                </p>
               </div>
-              <p className="mt-2 font-medium text-gray-700">
-                {booking.providerName} - ETA {booking.providerEta}
-              </p>
-              <p className="mt-1 font-medium text-gray-700">
-                Payment: {booking.paymentLabel || "Pay later"}
-              </p>
-              <p className="mt-2 flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                {booking.pickup} to {booking.dropoff}
-              </p>
-              <p className="mt-1 flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                {booking.pickupTime} - {booking.distanceKm} km -{" "}
-                {formatUsd(booking.estimatedPrice)}
-              </p>
-            </div>
-          ))
+            );
+          })
         ) : (
           <p className="rounded-xl bg-gray-50 p-3 text-sm">
             No transport booking yet.
