@@ -9,11 +9,12 @@ const MyTrips = () => {
   const [userTrips, setUserTrips] = useState([]);
   const navigate = useNavigate();
 
-  const getUserTrips = async () => {
+  useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
 
     if (!user) {
-      return navigate("/");
+      navigate("/");
+      return;
     }
 
     const q = query(
@@ -21,25 +22,19 @@ const MyTrips = () => {
       where("userEmail", "==", user?.email),
     );
 
-    try {
-      const querySnapshot = await getDocs(q);
+    getDocs(q)
+      .then((querySnapshot) => {
+        const allTrips = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
 
-      // Map everything into one array first
-      const allTrips = querySnapshot.docs.map((doc) => ({
-        id: doc.id, // always keep the ID
-        ...doc.data(),
-        // doc.data() is never undefined for query doc snapshots
-      }));
-
-      setUserTrips(allTrips);
-    } catch (error) {
-      console.log("Error fetching userTrips", error);
-    }
-  };
-
-  useEffect(() => {
-    getUserTrips();
-  }, []);
+        setUserTrips(allTrips);
+      })
+      .catch((error) => {
+        console.log("Error fetching userTrips", error);
+      });
+  }, [navigate]);
 
   return (
     <div className="max-padd-container py-20 xl:py-28">

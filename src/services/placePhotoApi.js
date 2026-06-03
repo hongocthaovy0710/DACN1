@@ -95,7 +95,7 @@ const getWikipediaPhoto = async (textQuery) => {
     return (
       res?.data?.thumbnail?.source || res?.data?.originalimage?.source || null
     );
-  } catch (error) {
+  } catch {
     console.log("Wikipedia photo not found:", textQuery);
     return null;
   }

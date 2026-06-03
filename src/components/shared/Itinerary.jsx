@@ -5,8 +5,12 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import ActivityCard from "./ActivityCard";
+import { getActivityKey } from "@/utils/tripHelpers";
 
-const Itinerary = ({ trip }) => {
+const Itinerary = ({ trip, onToggleFavorite, onToggleVisited }) => {
+  const favoritePlaces = trip?.favoritePlaces || {};
+  const visitedPlaces = trip?.visitedPlaces || {};
+
   return (
     <section>
       <Accordion type="single" collapsible defaultValue={"item-1"}>
@@ -19,9 +23,27 @@ const Itinerary = ({ trip }) => {
               {/* Timeline */}
               <div className="mt-4">
                 {/* Item - Activity */}
-                {itinerary.activities?.map((activity, i) => (
-                  <ActivityCard key={i} activity={activity} />
-                ))}
+                {itinerary.activities?.map((activity, i) => {
+                  const activityKey = getActivityKey(
+                    itinerary.dayNumber,
+                    activity?.activityName,
+                  );
+
+                  return (
+                    <ActivityCard
+                      key={activityKey || i}
+                      activity={activity}
+                      isFavorite={Boolean(favoritePlaces[activityKey])}
+                      isVisited={Boolean(visitedPlaces[activityKey])}
+                      onToggleFavorite={() =>
+                        onToggleFavorite?.(activityKey, activity, itinerary)
+                      }
+                      onToggleVisited={() =>
+                        onToggleVisited?.(activityKey, activity, itinerary)
+                      }
+                    />
+                  );
+                })}
               </div>
             </AccordionContent>
           </AccordionItem>
