@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../services/firebaseConfig";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import { Calendar } from "lucide-react";
@@ -79,8 +79,9 @@ const TripDetails = () => {
 
     const docRef = doc(db, "trips-ai", tripId);
 
-    getDoc(docRef)
-      .then((docSnap) => {
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
         if (docSnap.exists()) {
           console.log("Document data:", docSnap.data());
           setTrip(docSnap.data());
@@ -88,10 +89,13 @@ const TripDetails = () => {
           console.log("No such document!");
           navigate("/create-trip");
         }
-      })
-      .catch((error) => {
+      },
+      (error) => {
         console.log("Error getting document:", error);
-      });
+      },
+    );
+
+    return unsubscribe;
   }, [tripId, navigate]);
 
   const destination = getTripDestination(trip);
@@ -139,7 +143,7 @@ const TripDetails = () => {
   const handleBookHotel = async (hotel, bookingDetails = {}) => {
     const bookedHotel = {
       ...hotel,
-      status: "confirmed",
+      status: "pending",
       bookedAt: new Date().toISOString(),
       estimatedNightlyPrice: estimateHotelNightlyPrice(
         hotel,
@@ -154,7 +158,7 @@ const TripDetails = () => {
     });
 
     setTrip({ ...trip, bookedHotel });
-    toast.success("Hotel selected for this trip!");
+    toast.success("Hotel request sent. Waiting for admin confirmation!");
   };
 
   const buildFavoritePlace = (activityKey, activity, itinerary) => ({
